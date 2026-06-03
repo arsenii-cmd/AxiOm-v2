@@ -1,0 +1,25 @@
+include: package:lint/strict.yaml
+
+analyzer:
+  plugins:
+    - custom_lint
+  exclude:
+    - "hiddify-core/**"
+    - "**.g.dart"
+    - "lib/gen/**"
+  errors:
+    invalid_annotation_target: ignore
+
+formatter:
+  page_width: 120
+
+linter:
+  rules:
+    sort_pub_dependencies: false
+    sort_unnamed_constructors_first: false
+    avoid_classes_with_only_static_members: false
+
+custom_lint:
+  rules:
+    # Enable one rule
+    - provider_parameters

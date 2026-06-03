@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+  <!-- Outer circle -->
+  <path
+      android:pathData="M54,54 m-50,0 a50,50 0 1,0 100,0 a50,50 0 1,0 -100,0"
+      android:strokeColor="#5BA3FF"
+      android:strokeWidth="1.5"
+      android:fillColor="@android:color/transparent"/>
+
+  <!-- Equator line -->
+  <path
+      android:pathData="M4,54 L104,54"
+      android:strokeColor="#5BA3FF"
+      android:strokeWidth="0.8"
+      android:strokeAlpha="0.35"
+      android:fillColor="@android:color/transparent"/>
+
+  <!-- Vertical ellipse left arc -->
+  <path
+      android:pathData="M54,4 A22,50 0 0,0 54,104"
+      android:strokeColor="#5BA3FF"
+      android:strokeWidth="0.6"
+      android:strokeAlpha="0.5"
+      android:fillColor="@android:color/transparent"/>
+
+  <!-- Vertical ellipse right arc -->
+  <path
+      android:pathData="M54,4 A22,50 0 0,1 54,104"
+      android:strokeColor="#5BA3FF"
+      android:strokeWidth="0.6"
+      android:strokeAlpha="0.5"
+      android:fillColor="@android:color/transparent"/>
+
+</vector>

@@ -1,0 +1,155 @@
+
+plugins { 
+    id "com.android.application" 
+    id "org.jetbrains.kotlin.android" 
+    id "dev.flutter.flutter-gradle-plugin" 
+    id "com.google.protobuf" version "0.9.4" 
+    id "com.squareup.wire" version "5.3.1"
+}
+
+wire {
+    kotlin {
+        android = true
+    }
+    protoPath {
+        srcDir 'src/main/protos'
+    }
+    sourcePath {
+        srcDir 'src/main/protos/'
+        include '**'
+    }
+}
+
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+boolean hasKeyStore = false
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    hasKeyStore = true
+} else {
+    println "+++"
+    println "No keystore defined. The app will not be signed."
+    println "Create a android/key.properties file with the following properties:"
+    println "storePassword"
+    println "keyPassword"
+    println "keyAlias"
+    println "storeFile"
+    println "+++"
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')?: '1'
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
+android {
+    namespace 'com.hiddify.hiddify'
+    testNamespace "test.com.hiddify.hiddify"
+    compileSdkVersion 36
+    ndkVersion "28.2.13676358"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "app.axiom.vpn"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion 36
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            //noinspection ChromeOsAbiSupport
+            include "x86_64", "armeabi-v7a", "arm64-v8a"
+
+            universalApk true
+        }
+    }
+
+    if (hasKeyStore) {
+        signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (hasKeyStore) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
+            ndk {
+                //noinspection ChromeOsAbiSupport
+                abiFilters "x86_64", "armeabi-v7a", "arm64-v8a"
+                debugSymbolLevel 'FULL'
+            }
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+        aidl true
+    }
+
+}
+
+android.applicationVariants.all { variant ->
+    variant.outputs.each { output ->
+        output.versionCodeOverride = android.defaultConfig.versionCode
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.7'
+    implementation "androidx.compose.ui:ui:1.7.8"
+    implementation("com.squareup.wire:wire-grpc-client:5.3.1")
+
+    implementation 'io.grpc:grpc-okhttp:1.64.0'
+    implementation 'io.grpc:grpc-protobuf-lite:1.64.0'
+    implementation 'io.grpc:grpc-stub:1.64.0'
+//    protoPath(project(':hiddify_api'))
+//    implementation project(':hiddify_api')
+
+
+
+
+}
