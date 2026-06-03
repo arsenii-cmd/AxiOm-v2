@@ -48,4 +48,4 @@ Intentionally git-ignored / externalized:
 
 Based on [Hiddify](https://github.com/hiddify/hiddify-app) and the
 [sing-box](https://github.com/SagerNet/sing-box) core. This project inherits the upstream
-license — see [LICENSE.md](LICENSE.md).
+license — see [LICENSE.md](LICENSE.md)
