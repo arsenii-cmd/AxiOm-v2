@@ -103,6 +103,7 @@ List<ServerOption> _readCachedServerOptions(SharedPreferences prefs) {
         .map(
           (e) => ServerOption(
             country: (e as Map<String, dynamic>)['c'] as String,
+            protocol: (e['p'] as String?) ?? ServerOption.protocolVless,
             transport: e['t'] as String,
             rawTag: '',
             delay: 0,
@@ -115,7 +116,7 @@ List<ServerOption> _readCachedServerOptions(SharedPreferences prefs) {
 }
 
 Future<void> _writeCachedServerOptions(SharedPreferences prefs, List<ServerOption> options) {
-  final data = options.map((o) => {'c': o.country, 't': o.transport}).toList();
+  final data = options.map((o) => {'c': o.country, 'p': o.protocol, 't': o.transport}).toList();
   return prefs.setString(_cachedServerOptionsKey, jsonEncode(data));
 }
 
@@ -182,6 +183,13 @@ class _ServerSelectorBody extends HookConsumerWidget {
         defaultValue: ServerOption.autoCountryKey,
       ),
     );
+    final protocolPref = useMemoized(
+      () => PreferencesEntry<String, String>(
+        preferences: prefs,
+        key: 'server_selector_protocol',
+        defaultValue: '',
+      ),
+    );
     final transportPref = useMemoized(
       () => PreferencesEntry<String, String>(
         preferences: prefs,
@@ -192,6 +200,9 @@ class _ServerSelectorBody extends HookConsumerWidget {
 
     // Restore the previously selected server instead of defaulting to auto.
     final selectedCountry = useState<String?>(countryPref.read());
+    final selectedProtocol = useState<String?>(
+      protocolPref.read().isEmpty ? null : protocolPref.read(),
+    );
     final selectedTransport = useState<String?>(
       transportPref.read().isEmpty ? null : transportPref.read(),
     );
@@ -210,23 +221,33 @@ class _ServerSelectorBody extends HookConsumerWidget {
       if (options.isEmpty || selectedCountry.value == ServerOption.autoCountryKey) return null;
       final c = selectedCountry.value;
       if (c == null) return null;
-      final available = ServerOption.transportsFor(options, c);
-      if (available.isEmpty) {
+      final protocols = ServerOption.protocolsFor(options, c);
+      if (protocols.isEmpty) {
         // Remembered country is no longer available — fall back to auto.
         selectedCountry.value = ServerOption.autoCountryKey;
         countryPref.write(ServerOption.autoCountryKey);
         return null;
       }
+      final p = protocols.contains(selectedProtocol.value) ? selectedProtocol.value! : protocols.first;
+      if (selectedProtocol.value != p) {
+        selectedProtocol.value = p;
+        protocolPref.write(p);
+      }
+      final available = ServerOption.transportsFor(options, c, p);
+      if (available.isEmpty) return null;
       final tr = available.contains(selectedTransport.value) ? selectedTransport.value! : available.first;
-      if (selectedTransport.value != tr) selectedTransport.value = tr;
-      final option = ServerOption.find(options, c, tr);
+      if (selectedTransport.value != tr) {
+        selectedTransport.value = tr;
+        transportPref.write(tr);
+      }
+      final option = ServerOption.find(options, c, p, tr);
       if (live && option != null && selectedRawTag != option.rawTag) {
         Future.microtask(
           () => ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(groupTag!, option.rawTag),
         );
       }
       return null;
-    }, [itemsSignature, selectedCountry.value, selectedTransport.value]);
+    }, [itemsSignature, selectedCountry.value, selectedProtocol.value, selectedTransport.value]);
 
     // Auto-mode: trigger a single url-test when no usable delays are available
     // yet. Guarded so it does not re-fire on every delay update, which would
@@ -253,6 +274,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
       Future.microtask(() async {
         final best = ServerOption.fastest(options);
         if (best == null) return;
+        selectedProtocol.value = best.protocol;
         selectedTransport.value = best.transport;
         if (selectedRawTag != best.rawTag) {
           await ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(groupTag!, best.rawTag);
@@ -263,12 +285,16 @@ class _ServerSelectorBody extends HookConsumerWidget {
 
     final isAuto = selectedCountry.value == ServerOption.autoCountryKey;
     final country = isAuto ? fastestOption?.country : selectedCountry.value;
+    final protocol = isAuto ? fastestOption?.protocol : selectedProtocol.value;
     final transport = isAuto ? fastestOption?.transport : selectedTransport.value;
-    final transports = !isAuto && country != null ? ServerOption.transportsFor(options, country) : <String>[];
+    final protocols = !isAuto && country != null ? ServerOption.protocolsFor(options, country) : <String>[];
+    final transports = !isAuto && country != null && protocol != null
+        ? ServerOption.transportsFor(options, country, protocol)
+        : <String>[];
 
-    Future<void> applySelection(String? newCountry, String? newTransport) async {
-      if (!live || newCountry == null || newTransport == null) return;
-      final option = ServerOption.find(options, newCountry, newTransport);
+    Future<void> applySelection(String? newCountry, String? newProtocol, String? newTransport) async {
+      if (!live || newCountry == null || newProtocol == null || newTransport == null) return;
+      final option = ServerOption.find(options, newCountry, newProtocol, newTransport);
       if (option == null) return;
       if (selectedRawTag == option.rawTag) return;
       await ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(groupTag!, option.rawTag);
@@ -345,70 +371,137 @@ class _ServerSelectorBody extends HookConsumerWidget {
                     await countryPref.write(ServerOption.autoCountryKey);
                     final best = ServerOption.fastest(options);
                     if (best == null) return;
+                    selectedProtocol.value = best.protocol;
                     selectedTransport.value = best.transport;
-                    await applySelection(best.country, best.transport);
+                    await applySelection(best.country, best.protocol, best.transport);
                     return;
                   }
                   selectedCountry.value = value;
-                  final nextTransports = ServerOption.transportsFor(options, value);
+                  final nextProtocols = ServerOption.protocolsFor(options, value);
+                  final nextProtocol = nextProtocols.contains(selectedProtocol.value)
+                      ? selectedProtocol.value!
+                      : nextProtocols.first;
+                  selectedProtocol.value = nextProtocol;
+                  final nextTransports = ServerOption.transportsFor(options, value, nextProtocol);
                   final nextTransport = nextTransports.contains(selectedTransport.value)
                       ? selectedTransport.value!
                       : nextTransports.first;
                   selectedTransport.value = nextTransport;
                   await countryPref.write(value);
+                  await protocolPref.write(nextProtocol);
                   await transportPref.write(nextTransport);
-                  await applySelection(value, nextTransport);
+                  await applySelection(value, nextProtocol, nextTransport);
                 },
         ),
       );
     }
 
-    Widget buildTransportRow() {
+    Widget labelRow(String label, String value) {
+      return Row(
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Gap(12),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget buildProtocolRow() {
       if (isAuto) {
         if (fastestOption == null) return const SizedBox.shrink();
-        return Row(
-          children: [
-            Text(
-              'Транспорт',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Text(
-                '${ServerOption.countryFlagEmoji(fastestOption!.country)} ${fastestOption!.country} · ${ServerOption.transportLabel(fastestOption!.transport)}',
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        return labelRow(
+          'Протокол',
+          '${ServerOption.countryFlagEmoji(fastestOption!.country)} ${fastestOption!.country} · ${ServerOption.protocolLabel(fastestOption!.protocol)}',
         );
       }
 
-      if (country == null || transports.isEmpty) {
+      if (country == null || protocols.isEmpty) return const SizedBox.shrink();
+
+      if (protocols.length == 1) {
+        return labelRow('Протокол', ServerOption.protocolLabel(protocols.first));
+      }
+
+      return Row(
+        children: [
+          Text(
+            'Протокол',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Gap(8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: protocol != null && protocols.contains(protocol) ? protocol : protocols.first,
+                items: protocols.map((p) {
+                  final delay = ServerOption.bestDelayForProtocol(options, country, p);
+                  return DropdownMenuItem(
+                    value: p,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ServerOption.protocolLabel(p),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          formatDelay(delay),
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) async {
+                  if (value == null) return;
+                  selectedProtocol.value = value;
+                  final nextTransports = ServerOption.transportsFor(options, country, value);
+                  final nextTransport = nextTransports.contains(selectedTransport.value)
+                      ? selectedTransport.value!
+                      : nextTransports.first;
+                  selectedTransport.value = nextTransport;
+                  await protocolPref.write(value);
+                  await transportPref.write(nextTransport);
+                  await applySelection(country, value, nextTransport);
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget buildTransportRow() {
+      // Hysteria2 has a single transport (QUIC) — hide the row entirely.
+      if (protocol == ServerOption.protocolHysteria2) return const SizedBox.shrink();
+
+      if (isAuto) {
+        if (fastestOption == null || fastestOption!.protocol == ServerOption.protocolHysteria2) {
+          return const SizedBox.shrink();
+        }
+        return labelRow('Транспорт', ServerOption.transportLabel(fastestOption!.transport));
+      }
+
+      if (country == null || protocol == null || transports.isEmpty) {
         return const SizedBox.shrink();
       }
 
       if (transports.length == 1) {
-        final only = transports.first;
-        return Row(
-          children: [
-            Text(
-              'Транспорт',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Text(
-                ServerOption.transportLabel(only),
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-        );
+        return labelRow('Транспорт', ServerOption.transportLabel(transports.first));
       }
 
       return Row(
@@ -426,7 +519,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
                 isExpanded: true,
                 value: transport != null && transports.contains(transport) ? transport : transports.first,
                 items: transports.map((tr) {
-                  final delay = ServerOption.find(options, country, tr)?.delay;
+                  final delay = ServerOption.find(options, country, protocol, tr)?.delay;
                   return DropdownMenuItem(
                     value: tr,
                     child: Row(
@@ -449,7 +542,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
                   if (value == null) return;
                   selectedTransport.value = value;
                   await transportPref.write(value);
-                  await applySelection(country, value);
+                  await applySelection(country, protocol, value);
                 },
               ),
             ),
@@ -460,7 +553,9 @@ class _ServerSelectorBody extends HookConsumerWidget {
 
     final selectedDelay = isAuto
         ? fastestOption?.delay
-        : (country != null && transport != null ? ServerOption.find(options, country, transport)?.delay : null);
+        : (country != null && protocol != null && transport != null
+            ? ServerOption.find(options, country, protocol, transport)?.delay
+            : null);
 
     return _SelectorShell(
       child: Column(
@@ -510,6 +605,8 @@ class _ServerSelectorBody extends HookConsumerWidget {
           ),
           const Gap(4),
           buildCountryDropdown(),
+          const Gap(10),
+          buildProtocolRow(),
           const Gap(10),
           buildTransportRow(),
           if (!live) ...[

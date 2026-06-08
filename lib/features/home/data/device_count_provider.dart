@@ -7,7 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 //   flutter build ... --dart-define=DEVICE_API_KEY=<key>
 // Without it the device counter simply stays hidden (graceful degradation).
 const _apiKey = String.fromEnvironment('DEVICE_API_KEY');
-const _baseUrl = 'https://vpn.arcohouse.space/devices/api/devices';
+const _baseUrl = 'https://fr.arcohouse.space/devices/api/devices';
 
 class DeviceInfo {
   const DeviceInfo({

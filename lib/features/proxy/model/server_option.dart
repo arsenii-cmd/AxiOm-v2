@@ -4,12 +4,18 @@ import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 class ServerOption {
   ServerOption({
     required this.country,
+    required this.protocol,
     required this.transport,
     required this.rawTag,
     required this.delay,
   });
 
   final String country;
+
+  /// 'vless' | 'hysteria2'
+  final String protocol;
+
+  /// 'ws' | 'tcp' (for vless) | 'hy2' (for hysteria2)
   final String transport;
   final String rawTag;
   final int delay;
@@ -17,24 +23,41 @@ class ServerOption {
   /// Sentinel for the auto (fastest server + transport) selector mode.
   static const String autoCountryKey = '__auto__';
 
+  static const String protocolVless = 'vless';
+  static const String protocolHysteria2 = 'hysteria2';
+
   static bool isValidDelay(int delay) => delay > 0 && delay < 65000;
 
-  // Server tags look like "<Country> (<username>) [<transport>]" where the
+  // Server tags look like "<Country> (<username>) [<token>]" where the
   // parenthetical is the subscription account name (varies per user), so it
-  // must not be hard-coded to a specific value.
+  // must not be hard-coded to a specific value. The token encodes both
+  // protocol and transport: ws/tcp → vless, hy2/hysteria2 → hysteria2.
   static final RegExp _displayPattern = RegExp(
-    r'^(.*?)\s*\([^)]*\)\s*\[(ws|tcp)\]\s*$',
+    r'^(.*?)\s*\([^)]*\)\s*\[([a-z0-9]+)\]\s*$',
     caseSensitive: false,
   );
+
+  /// Maps a bracket token to (protocol, transport), or null if unknown.
+  static (String, String)? _tokenToProtocolTransport(String token) {
+    return switch (token.toLowerCase()) {
+      'ws' => (protocolVless, 'ws'),
+      'tcp' => (protocolVless, 'tcp'),
+      'hy2' || 'hysteria2' || 'hysteria' || 'hy' => (protocolHysteria2, 'hy2'),
+      _ => null,
+    };
+  }
 
   static ServerOption? tryParseDisplay(String tagDisplay, {required String rawTag, int delay = 0}) {
     final match = _displayPattern.firstMatch(tagDisplay.trim());
     if (match == null) return null;
     final country = match.group(1)!.trim();
     if (country.isEmpty) return null;
+    final mapped = _tokenToProtocolTransport(match.group(2)!);
+    if (mapped == null) return null;
     return ServerOption(
       country: country,
-      transport: match.group(2)!.toLowerCase(),
+      protocol: mapped.$1,
+      transport: mapped.$2,
       rawTag: rawTag,
       delay: delay,
     );
@@ -58,18 +81,29 @@ class ServerOption {
     return options.map((o) => o.country).toSet();
   }
 
-  static List<String> transportsFor(List<ServerOption> options, String country) {
+  static int _protocolRank(String protocol) => protocol == protocolVless ? 0 : 1;
+
+  static List<String> protocolsFor(List<ServerOption> options, String country) {
     return options
         .where((o) => o.country == country)
+        .map((o) => o.protocol)
+        .toSet()
+        .toList()
+      ..sort((a, b) => _protocolRank(a).compareTo(_protocolRank(b)));
+  }
+
+  static List<String> transportsFor(List<ServerOption> options, String country, String protocol) {
+    return options
+        .where((o) => o.country == country && o.protocol == protocol)
         .map((o) => o.transport)
         .toSet()
         .toList()
       ..sort();
   }
 
-  static ServerOption? find(List<ServerOption> options, String country, String transport) {
+  static ServerOption? find(List<ServerOption> options, String country, String protocol, String transport) {
     for (final o in options) {
-      if (o.country == country && o.transport == transport) return o;
+      if (o.country == country && o.protocol == protocol && o.transport == transport) return o;
     }
     return null;
   }
@@ -77,6 +111,14 @@ class ServerOption {
   static int? bestDelayForCountry(List<ServerOption> options, String country) {
     final delays = options
         .where((o) => o.country == country && isValidDelay(o.delay))
+        .map((o) => o.delay);
+    if (delays.isEmpty) return null;
+    return delays.reduce((a, b) => a < b ? a : b);
+  }
+
+  static int? bestDelayForProtocol(List<ServerOption> options, String country, String protocol) {
+    final delays = options
+        .where((o) => o.country == country && o.protocol == protocol && isValidDelay(o.delay))
         .map((o) => o.delay);
     if (delays.isEmpty) return null;
     return delays.reduce((a, b) => a < b ? a : b);
@@ -92,9 +134,16 @@ class ServerOption {
     return best;
   }
 
+  static String protocolLabel(String protocol) => switch (protocol.toLowerCase()) {
+    'vless' => 'VLESS',
+    'hysteria2' => 'Hysteria2',
+    _ => protocol,
+  };
+
   static String transportLabel(String transport) => switch (transport.toLowerCase()) {
     'ws' => 'WebSocket',
     'tcp' => 'Reality (TCP)',
+    'hy2' => 'QUIC',
     _ => transport,
   };
 
