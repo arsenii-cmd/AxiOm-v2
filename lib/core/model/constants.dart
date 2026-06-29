@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 
 abstract class Constants {
   static const appName = "AxiOm";
-  static const githubUrl = "https://github.com/hiddify/hiddify-next";
-  static const licenseUrl = "https://github.com/hiddify/hiddify-next?tab=License-1-ov-file#readme";
-  static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-next/releases";
-  static const githubLatestReleaseUrl = "https://github.com/hiddify/hiddify-app/releases/latest";
-  static const appCastUrl = "https://raw.githubusercontent.com/hiddify/hiddify-next/main/appcast.xml";
-  static const telegramChannelUrl = "https://t.me/hiddify";
+  static const githubUrl = "https://github.com/arsenii-cmd/AxiOm-v2";
+  static const licenseUrl = "https://github.com/arsenii-cmd/AxiOm-v2?tab=License-1-ov-file#readme";
+  static const githubReleasesApiUrl = "https://api.github.com/repos/arsenii-cmd/AxiOm-v2/releases";
+  static const githubLatestReleaseUrl = "https://github.com/arsenii-cmd/AxiOm-v2/releases/latest";
+  static const appCastUrl = "https://raw.githubusercontent.com/arsenii-cmd/AxiOm-v2/master/appcast.xml";
+  static const telegramChannelUrl = "https://t.me/AxiOm_freedom";
+  static const telegramBuyBotUrl = "https://t.me/AxiOm_buy_bot";
+  static const telegramSupportBotUrl = "https://t.me/AxiOm_Npv_support_bot";
   static const privacyPolicyUrl = "https://hiddify.com/privacy-policy/";
   static const termsAndConditionsUrl = "https://hiddify.com/terms/";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";

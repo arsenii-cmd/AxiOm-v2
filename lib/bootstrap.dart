@@ -15,6 +15,7 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/preferences/preferences_migration.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/features/app/widget/app.dart';
+import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
 import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
@@ -101,6 +102,9 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
 
   Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
   stopWatch.stop();
+
+  // Auto-check for updates on startup — fire-and-forget, does not block launch
+  unawaited(container.read(appUpdateNotifierProvider.notifier).check());
 
   runApp(
     ProviderScope(

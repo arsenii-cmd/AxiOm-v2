@@ -15,6 +15,7 @@ class RemoteVersionEntity with _$RemoteVersionEntity {
     required String url,
     required DateTime publishedAt,
     required Environment flavor,
+    String? assetDownloadUrl,
   }) = _RemoteVersionEntity;
 
   String get presentVersion => flavor == Environment.prod ? version : "$version ${flavor.name}";

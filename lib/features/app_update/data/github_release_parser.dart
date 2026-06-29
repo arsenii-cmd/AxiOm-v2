@@ -23,6 +23,27 @@ abstract class GithubReleaseParser {
     }
     final preRelease = json["prerelease"] as bool;
     final publishedAt = DateTime.parse(json["published_at"] as String);
+    // Extract the arm64 APK download URL for in-app updates on Android.
+    String? assetDownloadUrl;
+    final assets = json["assets"] as List<dynamic>?;
+    if (assets != null) {
+      for (final asset in assets) {
+        final name = (asset as Map<String, dynamic>)["name"] as String? ?? '';
+        if (name.endsWith('.apk') && name.contains('arm64')) {
+          assetDownloadUrl = asset["browser_download_url"] as String?;
+          break;
+        }
+      }
+      // Fallback: any APK
+      if (assetDownloadUrl == null) {
+        for (final a in assets.cast<Map<String, dynamic>>()) {
+          if ((a["name"] as String?)?.endsWith('.apk') == true) {
+            assetDownloadUrl = a["browser_download_url"] as String?;
+            break;
+          }
+        }
+      }
+    }
     return RemoteVersionEntity(
       version: version,
       buildNumber: buildNumber,
@@ -31,6 +52,7 @@ abstract class GithubReleaseParser {
       url: json["html_url"] as String,
       publishedAt: publishedAt,
       flavor: flavor,
+      assetDownloadUrl: assetDownloadUrl,
     );
   }
 }

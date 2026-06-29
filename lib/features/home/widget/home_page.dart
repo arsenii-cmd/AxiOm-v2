@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
+import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
+import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/widget/axiom_branding.dart';
+import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
+import 'package:hiddify/features/app_update/notifier/app_update_state.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/data/device_count_provider.dart';
@@ -29,6 +33,8 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     // final hasAnyProfile = ref.watch(hasAnyProfileProvider);
     final activeProfile = ref.watch(activeProfileProvider);
+    final appUpdate = ref.watch(appUpdateNotifierProvider);
+    final appInfo = ref.watch(appInfoProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -103,6 +109,18 @@ class HomePage extends HookConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              if (appUpdate case AppUpdateStateAvailable(:final versionInfo))
+                                _UpdateBanner(
+                                  version: versionInfo.presentVersion,
+                                  onTap: () {
+                                    if (appInfo == null) return;
+                                    ref.read(dialogNotifierProvider.notifier).showNewVersion(
+                                      currentVersion: appInfo.presentVersion,
+                                      newVersion: versionInfo,
+                                      canIgnore: false,
+                                    );
+                                  },
+                                ),
                               Expanded(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -346,6 +364,66 @@ class _StatCell extends StatelessWidget {
       child: onTap == null
           ? content
           : InkWell(onTap: onTap, borderRadius: BorderRadius.circular(8), child: content),
+    );
+  }
+}
+
+/// Banner shown on home page when a new version is available.
+/// Only disappears once the user updates the app — no dismiss/ignore.
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner({required this.version, required this.onTap});
+  final String version;
+  final VoidCallback onTap;
+
+  static const _leftBorderColor = Color(0xFF5DCAA5);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              border: const Border(left: BorderSide(color: _leftBorderColor, width: 3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.system_update_rounded, size: 20, color: _leftBorderColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Доступна версия $version',
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Коснитесь чтобы обновить',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

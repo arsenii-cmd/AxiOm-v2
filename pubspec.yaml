@@ -1,7 +1,7 @@
 name: hiddify
 description: Cross Platform Multi Protocol Proxy Frontend.
 publish_to: "none"
-version: 4.1.2+40102
+version: 4.1.7+40107
 
 environment:
   sdk: ^3.10.4
@@ -114,6 +114,7 @@ dependencies:
   # platform-specific  settings
   # https://github.com/miguelpruivo/flutter_file_picker/wiki/Setup
   file_picker: ^8.1.7
+  open_filex: ^4.6.0
   installed_apps: # ^1.5.2
     git: https://github.com/VB10/installed_apps
 

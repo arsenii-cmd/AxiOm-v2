@@ -116,24 +116,27 @@ class AboutPage extends HookConsumerWidget {
                 },
               ),
               ListTile(
-                title: Text(t.pages.about.telegramChannel),
+                title: const Text('Официальный канал'),
+                subtitle: const Text('@AxiOm_freedom', style: TextStyle(fontSize: 13)),
                 trailing: const Icon(FluentIcons.open_24_regular),
                 onTap: () async {
                   await UriUtils.tryLaunch(Uri.parse(Constants.telegramChannelUrl));
                 },
               ),
               ListTile(
-                title: Text(t.pages.about.termsAndConditions),
+                title: const Text('Бот для покупки'),
+                subtitle: const Text('@AxiOm_buy_bot', style: TextStyle(fontSize: 13)),
                 trailing: const Icon(FluentIcons.open_24_regular),
                 onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+                  await UriUtils.tryLaunch(Uri.parse(Constants.telegramBuyBotUrl));
                 },
               ),
               ListTile(
-                title: Text(t.pages.about.privacyPolicy),
+                title: const Text('Поддержка'),
+                subtitle: const Text('@AxiOm_Npv_support_bot', style: TextStyle(fontSize: 13)),
                 trailing: const Icon(FluentIcons.open_24_regular),
                 onTap: () async {
-                  await UriUtils.tryLaunch(Uri.parse(Constants.privacyPolicyUrl));
+                  await UriUtils.tryLaunch(Uri.parse(Constants.telegramSupportBotUrl));
                 },
               ),
             ]),
