@@ -8,6 +8,7 @@ import 'package:hiddify/features/connection/data/connection_data_providers.dart'
 import 'package:hiddify/features/connection/data/connection_repository.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -144,20 +145,21 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
     // Refresh subscription before connecting for remote profiles.
     if (initialProfile is RemoteProfileEntity) {
-      ref.read(subRefreshStateProvider.notifier).state = const SubRefreshRefreshing();
-      try {
-        final repo = await ref.read(profileRepositoryProvider.future);
-        final result = await repo.upsertRemote(initialProfile.url).run();
-        result.match(
-          (_) {}, // success — Unit
-          (failure) => throw Exception('Failed to refresh subscription: $failure'),
-        );
-        ref.read(subRefreshStateProvider.notifier).state = const SubRefreshSuccess();
-      } catch (e, st) {
-        loggy.warning("subscription refresh failed", e, st);
-        final msg = e.toString().length > 120 ? '${e.toString().substring(0, 120)}...' : e.toString();
-        ref.read(subRefreshStateProvider.notifier).state = SubRefreshError(msg);
-      }
+      final notif = ref.read(inAppNotificationControllerProvider);
+      notif.showLoadingToast('Обновление подписки...');
+      await ref
+          .read(profileRepositoryProvider)
+          .requireValue
+          .upsertRemote(initialProfile.url)
+          .mapLeft((l) {
+            loggy.debug("subscription refresh failed [$l]");
+            notif.showErrorToast('Ошибка обновления подписки');
+          })
+          .map((_) {
+            loggy.debug("subscription refreshed successfully");
+            notif.showSuccessToast('Подписка обновлена');
+          })
+          .run();
     }
 
     // Re-fetch — subscription may have been updated by the refresh above.
@@ -212,26 +214,3 @@ class SingleCall {
   }
 }
 
-/// Tracks subscription refresh state during the pre-connect refresh cycle.
-sealed class SubRefreshState {
-  const SubRefreshState();
-}
-
-class SubRefreshIdle extends SubRefreshState {
-  const SubRefreshIdle();
-}
-
-class SubRefreshRefreshing extends SubRefreshState {
-  const SubRefreshRefreshing();
-}
-
-class SubRefreshSuccess extends SubRefreshState {
-  const SubRefreshSuccess();
-}
-
-class SubRefreshError extends SubRefreshState {
-  const SubRefreshError(this.message);
-  final String message;
-}
-
-final subRefreshStateProvider = StateProvider<SubRefreshState>((_) => const SubRefreshIdle());

@@ -41,6 +41,9 @@ class InAppNotificationController with AppLogger {
 
   ToastificationItem? showInfoToast(String message, {Duration duration = const Duration(seconds: 3)}) =>
       _show(message, duration: duration);
+
+  ToastificationItem? showLoadingToast(String message) =>
+      _show(message, type: NotificationType.info, duration: const Duration(minutes: 5));
 }
 
 extension NotificationTypeX on NotificationType {

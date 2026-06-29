@@ -36,52 +36,6 @@ class HomePage extends HookConsumerWidget {
     final appUpdate = ref.watch(appUpdateNotifierProvider);
     final appInfo = ref.watch(appInfoProvider).valueOrNull;
 
-    ref.listen(subRefreshStateProvider, (_, next) {
-      if (!context.mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentMaterialBanner();
-
-      if (next case SubRefreshRefreshing()) {
-        messenger.showMaterialBanner(
-          MaterialBanner(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            content: const Row(children: [
-              SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 12),
-              Text('Обновление подписки...'),
-            ]),
-            actions: const [SizedBox.shrink()],
-          ),
-        );
-      } else if (next case SubRefreshSuccess()) {
-        messenger.showMaterialBanner(
-          MaterialBanner(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            backgroundColor: const Color(0xFF5DCAA5).withValues(alpha: 0.12),
-            leading: const Icon(Icons.check_circle, color: Color(0xFF5DCAA5), size: 20),
-            content: const Text('Подписка обновлена', style: TextStyle(fontWeight: FontWeight.w500)),
-            actions: const [SizedBox.shrink()],
-          ),
-        );
-        Future.delayed(const Duration(seconds: 2), () {
-          if (context.mounted) messenger.hideCurrentMaterialBanner();
-        });
-      } else if (next case SubRefreshError(:final message)) {
-        messenger.showMaterialBanner(
-          MaterialBanner(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            leading: Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 20),
-            content: Text(message, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-            actions: const [SizedBox.shrink()],
-          ),
-        );
-        Future.delayed(const Duration(seconds: 4), () {
-          if (context.mounted) messenger.hideCurrentMaterialBanner();
-        });
-      }
-    });
-
     return Scaffold(
       appBar: AppBar(
         title: const AxiOmAppBarTitle(),
