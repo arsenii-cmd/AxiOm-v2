@@ -40,21 +40,23 @@ void main() {
 
       expect(options, hasLength(3));
       expect(
-        options.map((o) => (o.country, o.transport, o.rawTag, o.delay)),
+        options.map((o) => (o.country, o.protocol, o.transport, o.rawTag, o.delay)),
         containsAll([
-          ('Netherlands', 'ws', 'nl-ws', 120),
-          ('France', 'tcp', 'fr-tcp', 90),
-          ('Poland', 'tcp', 'pl-tcp', 200),
+          ('Netherlands', 'vless', 'ws', 'nl-ws', 120),
+          ('France', 'vless', 'tcp', 'fr-tcp', 90),
+          ('Poland', 'vless', 'tcp', 'pl-tcp', 200),
         ]),
       );
 
       final countries = ServerOption.countries(options).toList()..sort();
       expect(countries, ['France', 'Netherlands', 'Poland']);
 
-      expect(ServerOption.transportsFor(options, 'France'), ['tcp']);
-      expect(ServerOption.transportsFor(options, 'Netherlands'), ['ws']);
+      expect(ServerOption.protocolsFor(options, 'France'), ['vless']);
+      expect(ServerOption.protocolsFor(options, 'Netherlands'), ['vless']);
+      expect(ServerOption.transportsFor(options, 'France', 'vless'), ['tcp']);
+      expect(ServerOption.transportsFor(options, 'Netherlands', 'vless'), ['ws']);
 
-      final found = ServerOption.find(options, 'France', 'tcp');
+      final found = ServerOption.find(options, 'France', 'vless', 'tcp');
       expect(found?.rawTag, 'fr-tcp');
     });
 
@@ -72,26 +74,26 @@ void main() {
 
       expect(options, hasLength(2));
       expect(
-        options.map((o) => (o.country, o.transport, o.rawTag)),
+        options.map((o) => (o.country, o.protocol, o.transport, o.rawTag)),
         containsAll([
-          ('Netherlands', 'ws', 'nl-ws'),
-          ('United States', 'tcp', 'de-tcp'),
+          ('Netherlands', 'vless', 'ws', 'nl-ws'),
+          ('United States', 'vless', 'tcp', 'de-tcp'),
         ]),
       );
     });
 
     test('fastest picks lowest delay across country and transport', () {
       final options = [
-        ServerOption(country: 'Netherlands', transport: 'ws', rawTag: 'nl-ws', delay: 120),
-        ServerOption(country: 'France', transport: 'tcp', rawTag: 'fr-tcp', delay: 90),
-        ServerOption(country: 'Poland', transport: 'tcp', rawTag: 'pl-tcp', delay: 200),
+        ServerOption(country: 'Netherlands', protocol: 'vless', transport: 'ws', rawTag: 'nl-ws', delay: 120),
+        ServerOption(country: 'France', protocol: 'vless', transport: 'tcp', rawTag: 'fr-tcp', delay: 90),
+        ServerOption(country: 'Poland', protocol: 'vless', transport: 'tcp', rawTag: 'pl-tcp', delay: 200),
       ];
 
       expect(ServerOption.fastest(options)?.rawTag, 'fr-tcp');
       expect(ServerOption.fastest([]), isNull);
       expect(
         ServerOption.fastest([
-          ServerOption(country: 'France', transport: 'tcp', rawTag: 'fr-tcp', delay: 0),
+          ServerOption(country: 'France', protocol: 'vless', transport: 'tcp', rawTag: 'fr-tcp', delay: 0),
         ]),
         isNull,
       );
