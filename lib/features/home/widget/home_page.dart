@@ -21,6 +21,7 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
+import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
@@ -35,6 +36,24 @@ class HomePage extends HookConsumerWidget {
     final activeProfile = ref.watch(activeProfileProvider);
     final appUpdate = ref.watch(appUpdateNotifierProvider);
     final appInfo = ref.watch(appInfoProvider).valueOrNull;
+
+    // Periodic URL-test every 30 s while connected and the home screen is visible.
+    final connectionStatus = ref.watch(connectionNotifierProvider);
+    final isConnected = connectionStatus is AsyncData && connectionStatus.value is Connected;
+    final proxiesGroup = ref.watch(proxiesOverviewNotifierProvider).valueOrNull;
+    final urlTestTag = proxiesGroup?.tag;
+
+    final lifecycle = useAppLifecycleState();
+    final isForeground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+
+    useEffect(() {
+      if (!isConnected || !isForeground || urlTestTag == null) return null;
+      final timer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(urlTestTag),
+      );
+      return timer.cancel;
+    }, [isConnected, isForeground, urlTestTag]);
 
     return Scaffold(
       appBar: AppBar(

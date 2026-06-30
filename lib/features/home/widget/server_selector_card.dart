@@ -305,7 +305,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
       return '$delayмс';
     }
 
-    Widget buildCountryDropdown() {
+    Widget buildCountryDropdown(WidgetRef ref) {
       final dropdownValue = isAuto
           ? ServerOption.autoCountryKey
           : (country != null && countryList.contains(country) ? country : null);
@@ -318,6 +318,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
             style: theme.textTheme.bodyMedium,
           ),
           value: dropdownValue,
+          onTap: live ? () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag!) : null,
           items: [
             DropdownMenuItem(
               value: ServerOption.autoCountryKey,
@@ -417,7 +418,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
       );
     }
 
-    Widget buildProtocolRow() {
+    Widget buildProtocolRow(WidgetRef ref) {
       if (isAuto) {
         if (fastestOption == null) return const SizedBox.shrink();
         return labelRow(
@@ -446,6 +447,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: protocol != null && protocols.contains(protocol) ? protocol : protocols.first,
+                onTap: live ? () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag!) : null,
                 items: protocols.map((p) {
                   final delay = ServerOption.bestDelayForProtocol(options, country, p);
                   return DropdownMenuItem(
@@ -485,7 +487,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
       );
     }
 
-    Widget buildTransportRow() {
+    Widget buildTransportRow(WidgetRef ref) {
       // Hysteria2 has a single transport (QUIC) — hide the row entirely.
       if (protocol == ServerOption.protocolHysteria2) return const SizedBox.shrink();
 
@@ -518,6 +520,7 @@ class _ServerSelectorBody extends HookConsumerWidget {
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: transport != null && transports.contains(transport) ? transport : transports.first,
+                onTap: live ? () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag!) : null,
                 items: transports.map((tr) {
                   final delay = ServerOption.find(options, country, protocol, tr)?.delay;
                   return DropdownMenuItem(
@@ -604,11 +607,11 @@ class _ServerSelectorBody extends HookConsumerWidget {
             style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const Gap(4),
-          buildCountryDropdown(),
+          buildCountryDropdown(ref),
           const Gap(10),
-          buildProtocolRow(),
+          buildProtocolRow(ref),
           const Gap(10),
-          buildTransportRow(),
+          buildTransportRow(ref),
           if (!live) ...[
             const Gap(8),
             Text(
