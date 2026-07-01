@@ -25,6 +25,7 @@ class ServerOption {
 
   static const String protocolVless = 'vless';
   static const String protocolHysteria2 = 'hysteria2';
+  static const String protocolNaive = 'naive';
 
   static bool isValidDelay(int delay) => delay > 0 && delay < 65000;
 
@@ -43,6 +44,7 @@ class ServerOption {
       'ws' => (protocolVless, 'ws'),
       'tcp' => (protocolVless, 'tcp'),
       'hy2' || 'hysteria2' || 'hysteria' || 'hy' => (protocolHysteria2, 'hy2'),
+      'naive' || 'http' => (protocolNaive, 'naive'),
       _ => null,
     };
   }
@@ -81,7 +83,12 @@ class ServerOption {
     return options.map((o) => o.country).toSet();
   }
 
-  static int _protocolRank(String protocol) => protocol == protocolVless ? 0 : 1;
+  static int _protocolRank(String protocol) => switch (protocol.toLowerCase()) {
+    'vless' => 0,
+    'hysteria2' => 1,
+    'naive' => 2,
+    _ => 3,
+  };
 
   static List<String> protocolsFor(List<ServerOption> options, String country) {
     return options
@@ -137,6 +144,7 @@ class ServerOption {
   static String protocolLabel(String protocol) => switch (protocol.toLowerCase()) {
     'vless' => 'VLESS',
     'hysteria2' => 'Hysteria2',
+    'naive' => 'Naive',
     _ => protocol,
   };
 
@@ -144,6 +152,7 @@ class ServerOption {
     'ws' => 'WebSocket',
     'tcp' => 'Reality (TCP)',
     'hy2' => 'QUIC',
+    'naive' => 'HTTP/2 TLS',
     _ => transport,
   };
 
